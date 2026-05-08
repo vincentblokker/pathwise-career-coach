@@ -1,6 +1,5 @@
 """Pathwise — Personalized AI Career Coach.
 
-Streamlit port of the Pathwise design (Claude Design handoff, 2026-05-06).
 ADA AI Professional · Module 7 · final assignment.
 """
 from __future__ import annotations
@@ -41,7 +40,9 @@ st.set_page_config(
 inject_brand_css()
 
 
-# --- Sample / default profile (Sara, the Claude-Design persona) -------------
+# --- Sample / default profile -----------------------------------------------
+
+DEMO_USER_NAME = "Sara Lindqvist"
 
 DEFAULT_PROFILE = {
     "target_role": "Product Manager (SaaS)",
@@ -112,9 +113,12 @@ profile = st.session_state.profile
 # --- Hard-stop if no API key -----------------------------------------------
 
 
-if not os.getenv("OPENAI_API_KEY"):
+if not (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")):
     st.markdown('<div class="pw">' + lockup(size=22) + "</div>", unsafe_allow_html=True)
-    st.error("`OPENAI_API_KEY` is missing from `.env`. Add it and rerun the app.")
+    st.error(
+        "No LLM key found. Add `OPENROUTER_API_KEY` (preferred) or `OPENAI_API_KEY` "
+        "to `.env` and rerun the app."
+    )
     st.stop()
 
 
@@ -135,13 +139,15 @@ def make_initials(full_name: str) -> str:
 
 
 def screen_welcome() -> None:
-    top_shell(0, profile["target_role"], make_initials("Sara Lindqvist"))
+    top_shell(0, profile["target_role"], make_initials(DEMO_USER_NAME))
 
     left, right = st.columns([1.1, 1], gap="large")
 
     with left:
         st.markdown(
-            '<div class="pw pw-hero" style="padding: 32px 8px 0 0;">'
+            '<div class="pw pw-hero" '
+            'style="padding: 48px 24px 32px 8px; display:flex; flex-direction:column; '
+            'justify-content:center; min-height: 540px;">'
             '<span class="pw-eyebrow">Session 01 · Coaching</span>'
             "<h1>Let's map your<br/>next move.</h1>"
             "<p>Tell us where you're heading. In about ten minutes, you'll walk away with tailored "
@@ -156,17 +162,15 @@ def screen_welcome() -> None:
         )
 
     with right:
-        st.markdown(
-            '<div class="pw" style="padding: 8px 0 0 0;">'
-            '<div class="pw-card">'
-            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">'
-            f'{path_glyph(size=22)}'
-            '<span style="font-family:var(--pw-font-display);font-weight:600;font-size:15px;">Your profile</span>'
-            "</div></div></div>",
-            unsafe_allow_html=True,
-        )
+        with st.form("profile_form", clear_on_submit=False, border=True):
+            st.markdown(
+                '<div class="pw-form-header">'
+                f'{path_glyph(size=22)}'
+                '<span class="title">Your profile</span>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
 
-        with st.form("profile_form", clear_on_submit=False, border=False):
             c1, c2 = st.columns(2)
             with c1:
                 target_role = st.text_input("Target role", value=profile["target_role"])
@@ -176,24 +180,37 @@ def screen_welcome() -> None:
                     PERSONAS,
                     index=PERSONAS.index(profile["persona"]) if profile["persona"] in PERSONAS else 1,
                 )
+
             goal = st.text_area("Career goal · one sentence", value=profile["goal"], height=80)
+
             skills_text = st.text_input(
-                "Current skills (comma-separated)",
+                "Current skills",
                 value=", ".join(profile["skills"]),
+                help="Comma-separated. Add or remove anything that doesn't fit.",
             )
+
             tone = st.radio(
                 "Coaching tone",
                 TONES,
                 index=TONES.index(profile["tone"]) if profile["tone"] in TONES else 3,
                 horizontal=True,
             )
-            st.markdown(
-                '<div class="pw" style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">'
-                '<span class="pw-hint">Takes about 10 minutes · you can edit anything later</span>'
-                "</div>",
-                unsafe_allow_html=True,
-            )
-            submitted = st.form_submit_button("Start coaching →", type="primary", use_container_width=False)
+
+            foot_a, foot_b = st.columns([1, 1], gap="medium")
+            with foot_a:
+                st.markdown(
+                    '<div class="pw-form-footer-hint">'
+                    '<span class="pw-hint">Takes about 10 minutes · you can edit anything later.</span>'
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+            with foot_b:
+                submitted = st.form_submit_button(
+                    "Start coaching  →",
+                    type="primary",
+                    use_container_width=True,
+                )
+
             if submitted:
                 st.session_state.profile = {
                     **profile,
@@ -207,20 +224,21 @@ def screen_welcome() -> None:
 
 
 def screen_resume() -> None:
-    top_shell(1, profile["target_role"], make_initials("Sara Lindqvist"))
+    top_shell(1, profile["target_role"], make_initials(DEMO_USER_NAME))
 
-    st.markdown(
-        '<div class="pw" style="max-width:880px;margin:0 auto;">'
-        '<span class="pw-eyebrow">Step 1 of 3 · Resume bullets</span>'
-        "<h1 style='margin-top:6px;font-size:38px;'>Five bullets, tailored to your move.</h1>"
-        "<p class='pw-hint' style='font-size:16px;max-width:620px;'>Drafted from your goal and skills "
-        "— ATS-friendly, action-led, and quantified where the work actually was.</p>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    _, mid, _ = st.columns([1, 5, 1], gap="small")
 
-    container = st.container()
-    with container:
+    with mid:
+        st.markdown(
+            '<div class="pw">'
+            '<span class="pw-eyebrow">Step 1 of 3 · Resume bullets</span>'
+            "<h1 style='margin-top:6px;font-size:38px;'>Five bullets, tailored to your move.</h1>"
+            "<p class='pw-hint' style='font-size:16px;max-width:620px;'>Drafted from your goal and skills "
+            "— ATS-friendly, action-led, and quantified where the work actually was.</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
         outputs = st.session_state.outputs
         if "resume" not in outputs:
             with st.spinner("Drafting your bullets…"):
@@ -248,28 +266,31 @@ def screen_resume() -> None:
             "Bullets 2 and 3 are the strongest evidence; lead with those on a SaaS application."
         )
 
-        st.markdown(
-            f'<div style="max-width:880px;margin:0 auto;">',
-            unsafe_allow_html=True,
-        )
         bullet_card(f"Resume bullets · {profile['target_role']}", bullets)
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div style="max-width:880px;margin:24px auto 0;">', unsafe_allow_html=True)
-    nav_a, nav_b, nav_c = st.columns([1, 4, 2])
-    with nav_a:
-        if st.button("← Back", key="back_resume"):
-            goto(0)
-    with nav_b:
-        st.markdown('<span class="pw-hint">Edit any bullet inline · regenerate one at a time</span>', unsafe_allow_html=True)
-    with nav_c:
-        if st.button("Continue to interview prep →", key="next_resume", type="secondary"):
-            goto(2)
-    st.markdown("</div>", unsafe_allow_html=True)
+        nav_a, nav_b, nav_c = st.columns([1, 3, 2], gap="small")
+        with nav_a:
+            if st.button("← Back", key="back_resume"):
+                goto(0)
+        with nav_b:
+            st.markdown(
+                '<div class="pw-nav-hint">'
+                '<span class="pw-hint">Edit any bullet inline · regenerate one at a time</span>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        with nav_c:
+            if st.button(
+                "Continue to interview prep →",
+                key="next_resume",
+                type="primary",
+                use_container_width=True,
+            ):
+                goto(2)
 
 
 def screen_interview() -> None:
-    top_shell(2, profile["target_role"], make_initials("Sara Lindqvist"))
+    top_shell(2, profile["target_role"], make_initials(DEMO_USER_NAME))
 
     st.markdown(
         '<div class="pw">'
@@ -283,11 +304,10 @@ def screen_interview() -> None:
 
     with left:
         st.markdown(
-            '<div class="pw"><div class="pw-card">'
-            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+            '<div class="pw pw-jd-head">'
             '<span class="pw-eyebrow" style="margin:0;">Job description</span>'
-            '<span class="pw-hint" style="font-size:11.5px;">Lumen · PM, Growth · detected</span>'
-            "</div></div></div>",
+            '<span class="pw-hint" style="font-size:11.5px;">Paste any role · we\'ll tailor the questions</span>'
+            "</div>",
             unsafe_allow_html=True,
         )
         jd = st.text_area(
@@ -298,12 +318,12 @@ def screen_interview() -> None:
         )
         col_clear, col_sample = st.columns(2)
         with col_clear:
-            if st.button("Clear", key="jd_clear"):
+            if st.button("Clear", key="jd_clear", use_container_width=True):
                 st.session_state.job_description = ""
                 st.session_state.outputs.pop("interview", None)
                 st.rerun()
         with col_sample:
-            if st.button("Use a sample JD", key="jd_sample"):
+            if st.button("Use a sample JD", key="jd_sample", use_container_width=True):
                 st.session_state.job_description = SAMPLE_JD
                 st.session_state.outputs.pop("interview", None)
                 st.rerun()
@@ -350,19 +370,21 @@ def screen_interview() -> None:
         for i, q in enumerate(questions, start=1):
             expanded = i in st.session_state.expanded_qs
             question_card(i, q["q"], q["hint"], q["tags"], expanded)
-            tcol_a, tcol_b, _ = st.columns([1.4, 1.4, 4])
-            with tcol_a:
-                lbl = "Hide hint" if expanded else "Show answer hint"
-                if st.button(lbl, key=f"hint_{i}"):
+
+            st.markdown('<div class="pw-qcard-actions"></div>', unsafe_allow_html=True)
+            act_a, act_b = st.columns([1, 1], gap="small")
+            with act_a:
+                lbl = "Hide hint" if expanded else "Show hint"
+                if st.button(lbl, key=f"hint_{i}", use_container_width=True):
                     if expanded:
                         st.session_state.expanded_qs.discard(i)
                     else:
                         st.session_state.expanded_qs.add(i)
                     st.rerun()
-            with tcol_b:
+            with act_b:
                 practiced = i in st.session_state.practiced_qs
-                lbl2 = "✓ Practiced" if practiced else "Mark as practiced"
-                if st.button(lbl2, key=f"prac_{i}"):
+                lbl2 = "Practiced" if practiced else "Mark practiced"
+                if st.button(lbl2, key=f"prac_{i}", use_container_width=True):
                     if practiced:
                         st.session_state.practiced_qs.discard(i)
                     else:
@@ -371,24 +393,29 @@ def screen_interview() -> None:
 
         practiced_count = len(st.session_state.practiced_qs)
         st.markdown(
-            f'<div class="pw" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">'
+            f'<div class="pw pw-practiced-counter">'
             f'<span class="pw-hint">{practiced_count} of {len(questions)} practiced</span>'
             "</div>",
             unsafe_allow_html=True,
         )
 
     st.markdown('<div class="pw"><hr class="pw-divider"/></div>', unsafe_allow_html=True)
-    nav_a, _, nav_c = st.columns([1, 4, 2])
+    nav_a, _, nav_c = st.columns([1, 4, 2], gap="small")
     with nav_a:
         if st.button("← Back", key="back_interview"):
             goto(1)
     with nav_c:
-        if st.button("Continue to roadmap →", key="next_interview", type="secondary"):
+        if st.button(
+            "Continue to roadmap →",
+            key="next_interview",
+            type="primary",
+            use_container_width=True,
+        ):
             goto(3)
 
 
 def screen_roadmap() -> None:
-    top_shell(3, profile["target_role"], make_initials("Sara Lindqvist"))
+    top_shell(3, profile["target_role"], make_initials(DEMO_USER_NAME))
 
     st.markdown(
         '<div class="pw">'
@@ -440,17 +467,22 @@ def screen_roadmap() -> None:
     st.markdown(milestone_path_html(rm["milestones"]), unsafe_allow_html=True)
 
     st.markdown('<div class="pw"><hr class="pw-divider"/></div>', unsafe_allow_html=True)
-    nav_a, _, nav_c = st.columns([1, 4, 2])
+    nav_a, _, nav_c = st.columns([1, 4, 2], gap="small")
     with nav_a:
         if st.button("← Back", key="back_roadmap"):
             goto(2)
     with nav_c:
-        if st.button("See your coaching recap →", key="next_roadmap", type="primary"):
+        if st.button(
+            "See your coaching recap →",
+            key="next_roadmap",
+            type="primary",
+            use_container_width=True,
+        ):
             goto(4)
 
 
 def screen_recap() -> None:
-    top_shell(4, profile["target_role"], make_initials("Sara Lindqvist"))
+    top_shell(4, profile["target_role"], make_initials(DEMO_USER_NAME))
 
     outputs = st.session_state.outputs
     rm = outputs.get("roadmap")

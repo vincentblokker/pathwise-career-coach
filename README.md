@@ -18,8 +18,10 @@ Five screens, three LCEL chains, one warm-mentor coach.
 ## Setup
 
 ```bash
-# .env
-echo "OPENAI_API_KEY=sk-..." > .env
+# .env — pick ONE of:
+echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env   # routes via OpenRouter (multi-model gateway)
+# or
+echo "OPENAI_API_KEY=sk-..." > .env             # direct to OpenAI
 
 # install
 pip install -r requirements.txt
@@ -27,6 +29,8 @@ pip install -r requirements.txt
 # run
 streamlit run app.py
 ```
+
+If `OPENROUTER_API_KEY` is set the app uses OpenRouter (`openai/gpt-4o-mini` by default); otherwise it falls back to the standard OpenAI endpoint.
 
 Or with Docker:
 
@@ -45,8 +49,8 @@ docker compose up --build
 | `static/brand.css` | Brand tokens + Streamlit overrides — sage/cream/amber palette, Manrope + Inter |
 | `requirements.txt` | Pinned deps (LangChain 1.x via `langchain-classic` for memory) |
 | `Dockerfile`, `docker-compose.yml` | Container setup, port 8501 |
-| `docs/superpowers/specs/2026-05-06-pathwise-design.md` | Locked design spec + Claude Design prompts |
-| `.design-handoff/` | Original Claude Design output (HTML/CSS/JSX prototype) |
+| `docs/superpowers/specs/2026-05-06-pathwise-design.md` | Locked design spec |
+| `.design-handoff/` | Reference design prototype (HTML/CSS/JSX) |
 
 ## LangChain techniques used
 
@@ -58,7 +62,7 @@ docker compose up --build
 
 ## Brand & UI
 
-The visual system was designed in [Claude Design](https://www.anthropic.com/news/claude-design-anthropic-labs) (handoff in `.design-handoff/`) and re-implemented in Streamlit with custom CSS:
+The visual system was prototyped first as a React+CSS reference (in `.design-handoff/`) and re-implemented in Streamlit with custom CSS:
 
 - **Palette:** sage `#6F8F73`, cream `#F7F3EC`, ink `#1F2A24`, amber accent `#E0A24B`
 - **Type:** Manrope 600/700 (display) · Inter 400/500 (body) · JetBrains Mono (numerics)
@@ -77,7 +81,7 @@ For typed outputs I used `llm.with_structured_output(PydanticModel)` instead of 
 
 For memory I picked `ConversationBufferMemory` (via `langchain-classic`, which preserves the legacy class on LangChain 1.x). The assignment specifies this class, and a 3-step session is short enough that summarisation or windowing isn't needed. I write to `memory.save_context` after each chain call rather than letting the chain own the memory — this lets each step still receive whichever earlier outputs it needs, while keeping the memory log clean for the recap.
 
-The biggest UI trade-off was Streamlit vs. design fidelity. The design (Claude Design output, see `.design-handoff/`) is a polished React+CSS prototype. Streamlit can't render arbitrary React, so I rebuilt the look in Streamlit primitives plus heavy custom CSS in `static/brand.css`, with HTML helpers in `ui.py` for the parts where Streamlit widgets fall short (the milestone path SVG, the coach line, the bullet card). Pixel-perfect was never the goal; brand-coherent was. The wizard structure is preserved (Welcome → 3 coaching steps → Recap), and so are the visual hooks: stepped-horizon glyph, sage/cream/amber palette, Manrope headings, warm-mentor microcopy.
+The biggest UI trade-off was Streamlit vs. design fidelity. The reference design in `.design-handoff/` is a polished React+CSS prototype. Streamlit can't render arbitrary React, so I rebuilt the look in Streamlit primitives plus heavy custom CSS in `static/brand.css`, with HTML helpers in `ui.py` for the parts where Streamlit widgets fall short (the milestone path SVG, the coach line, the bullet card). Pixel-perfect was never the goal; brand-coherent was. The wizard structure is preserved (Welcome → 3 coaching steps → Recap), and so are the visual hooks: stepped-horizon glyph, sage/cream/amber palette, Manrope headings, warm-mentor microcopy.
 
 ### Scaling the app
 
@@ -94,8 +98,6 @@ The biggest UI trade-off was Streamlit vs. design fidelity. The design (Claude D
 - [ ] Deploy on Streamlit Community Cloud / Hugging Face Spaces
 
 ## Screenshots
-
-<!-- vincent: voeg de png's zelf toe in docs/screenshots/, named 01-welcome.png .. 05-recap.png -->
 
 ### 1. Welcome / Profile
 

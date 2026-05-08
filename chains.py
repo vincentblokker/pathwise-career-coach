@@ -5,6 +5,7 @@ plus a ConversationBufferMemory helper.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -14,11 +15,30 @@ from langchain_core.runnables import Runnable, RunnablePassthrough
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-DEFAULT_MODEL = "gpt-4o-mini"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+DEFAULT_MODEL_OPENAI = "gpt-4o-mini"
+DEFAULT_MODEL_OPENROUTER = "openai/gpt-4o-mini"
 
 
-def build_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7) -> ChatOpenAI:
-    return ChatOpenAI(model=model, temperature=temperature)
+def build_llm(model: str | None = None, temperature: float = 0.7) -> ChatOpenAI:
+    """Return a ChatOpenAI client.
+
+    If `OPENROUTER_API_KEY` is set, route via OpenRouter (OpenAI-compatible).
+    Otherwise fall back to the standard OpenAI endpoint with `OPENAI_API_KEY`.
+    """
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    if openrouter_key:
+        return ChatOpenAI(
+            model=model or DEFAULT_MODEL_OPENROUTER,
+            temperature=temperature,
+            api_key=openrouter_key,
+            base_url=OPENROUTER_BASE_URL,
+            default_headers={
+                "HTTP-Referer": "https://github.com/vincentblokker/pathwise-career-coach",
+                "X-Title": "Pathwise",
+            },
+        )
+    return ChatOpenAI(model=model or DEFAULT_MODEL_OPENAI, temperature=temperature)
 
 
 # --- Pydantic schemas (structured chain outputs) -----------------------------
